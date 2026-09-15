@@ -1,0 +1,10 @@
+{
+  "name": "demo-pr",
+  "version": "1.0.0",
+  "description": "Demo Bitbucket PRs locally for Cantor HR with docker, migrations, UI walkthrough, and screenshots",
+  "author": {
+    "name": "Ammar"
+  },
+  "keywords": ["demo", "bitbucket", "pr", "cantor-hr"],
+  "skills": "./skills/"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "ammar-skills",
+  "owner": {
+    "name": "Ammar",
+    "email": "ammar@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Personal Cursor skills marketplace",
+    "version": "1.0.0",
+    "pluginRoot": "plugins"
+  },
+  "plugins": [
+    {
+      "name": "demo-pr",
+      "source": "demo-pr",
+      "description": "Demo a Bitbucket PR locally: docker rebuild, UI walkthrough, screenshots, and non-UI review checklist"
+    }
+  ]
+}
