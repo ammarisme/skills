@@ -6,7 +6,7 @@ Personal Cursor plugin marketplace hosting agent skills.
 
 | Plugin | Skill | Description |
 |--------|--------|-------------|
-| `demo-pr` | `/demo-pr` | Demo a Bitbucket PR locally (docker, migrations, UI walkthrough, screenshots) |
+| `demo-pr` | `/demo-pr` | Demo any PR locally (discover stack, migrations, UI walkthrough, screenshots) |
 
 ## Install in Cursor
 

@@ -13,7 +13,7 @@
     {
       "name": "demo-pr",
       "source": "demo-pr",
-      "description": "Demo a Bitbucket PR locally: docker rebuild, UI walkthrough, screenshots, and non-UI review checklist"
+      "description": "Demo any PR locally: discover stack from the repo, UI walkthrough, screenshots, and non-UI review checklist"
     }
   ]
 }
