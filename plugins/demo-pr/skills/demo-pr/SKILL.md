@@ -14,11 +14,20 @@ disable-model-invocation: true
 # Demo pull request (generic)
 
 This skill must work for **any** client, Bitbucket/GitHub workspace, repository,
-tenant, or org. Never hardcode product names, company names, workspace slugs,
-repo slugs, tenant labels, service nicknames, or path layouts from a previous
-demo. Discover everything from the **PR URL**, **current repo**, and **this PR's
-diff**.
+tenant, or org. Do not carry over product names, company names, workspace
+slugs, repo slugs, tenant labels, service nicknames, or path layouts from an
+**unrelated** prior chat or a different project.
 
+**Allowed sources of truth (in order):**
+1. The **PR URL** and fetched PR metadata for this demo
+2. The **current project's** repo files, remotes, docs, and compose/scripts
+3. **Project memory** for this workspace/repo (how *this* project runs locally,
+   its ports, services, tenants, cred paths, auth flow) — use it freely when it
+   matches the open project
+4. **This PR's diff** for what to demo and review
+
+Do **not** invent facts, and do **not** reuse another client's defaults just
+because they appeared in an older chat.
 ## User prompt template (paste and fill)
 
 ```
@@ -45,18 +54,23 @@ Demo this PR for me:
 
 **From the PR URL (required):**
 - Parse host (Bitbucket Cloud / Bitbucket Server / GitHub / other), workspace/org, repository, and PR number
-- Do **not** fall back to remembered workspace/repo defaults from prior chats
+- Prefer the URL when present. If the URL is incomplete or the user only says
+  “demo this PR,” use **this project's** known remote/workspace/repo (git
+  remotes + project memory) — not defaults from a different project/chat
 - Fetch PR title, description, **source branch**, destination branch, and changed files via the host's API or `gh`/`curl` as available
 
-**Credentials (discover, don't invent paths):**
+**Credentials (project-aware):**
 - Prefer already-authenticated CLI (`gh`, `bb`, git remotes with working auth)
-- Else look for project-local env files the repo already documents (e.g. `.env`, `dev-bot/.env`, `scripts/.env`) for API tokens — only use keys that exist
-- If auth is missing, ask the user once; do not guess email/token variable names beyond what the repo shows
+- Else use paths/keys this **project** documents or that project memory records
+  for this repo (e.g. `.env`, `dev-bot/.env`, `scripts/.env`) — only use keys that exist
+- If auth is missing, ask the user once; do not guess email/token variable names beyond what this project shows
 
-**From the local repo (required before starting services):**
+**From the local repo + project memory (required before starting services):**
 - Confirm `git remote` / folder matches the PR's repository (or ask if unclear)
-- Discover how this project runs locally from README, compose files, package scripts, Makefiles, or `.env.example`:
-  - Package manager / monorepo layout (do not assume `apps/web` or `pnpm`)
+- Learn how this project runs locally from README, compose files, package
+  scripts, Makefiles, `.env.example`, **and** established project memory for
+  this workspace (prior successful demos of *this* repo are fine to reuse):
+  - Package manager / monorepo layout (do not assume another project's layout)
   - Docker Compose service names and which ones are API vs DB vs workers
   - Frontend start command and **web port**
   - Backend service(s) and **API port(s)**
@@ -65,42 +79,45 @@ Demo this PR for me:
 - Partition the diff into:
   - **Frontend-demoable** (pages, components, routes, visible copy/empty states)
   - **Not frontend-demoable** (API, middleware, auth/tenancy, repos, migrations, workers, config/env, tests, scripts)
-- Infer UI routes / migrations from **this** diff only (never hardcode feature names or routes from past PRs)
-
+- Infer UI routes / migrations from **this** diff; use project memory only for
+  how to *navigate/run* this app, not to invent features the PR did not change
 ### 1. Safe checkout
 - `git status` — if dirty, `git stash push -u -m "demo-pr autosave"` (tell the user)
 - Fetch and checkout/track the PR's **source branch** (or the host's PR-ref checkout equivalent)
 - Never discard uncommitted work unless the user explicitly asks
 
 ### 2–4. Local stack (docker + frontend)
-- Follow **this repo's** documented start path. Prefer compose/Make/scripts over inventing commands.
+- Follow **this project's** start path (docs + project memory). Prefer
+  compose/Make/scripts over inventing commands.
 - If `docker` / `docker compose` hangs: restart Docker Desktop, wait for `_ping` on the docker socket, then retry
 - Tear down only if this project uses Compose: `docker compose down` (or the project's equivalent)
-- Rebuild only the services this PR/stack needs (use the service names from compose — do not invent `api` / `api-bgc`-style names)
-- Start backend + DB services the project expects; bind to the **discovered** host ports
+- Rebuild only the services this PR/stack needs (use service names from this
+  project's compose / memory — do not invent names from another client)
+- Start backend + DB services the project expects; bind to the **known** host ports for this project
 - Start the frontend with the project's real command as a **Cursor background shell** (`block_until_ms: 0`). Do **not** rely on short-lived `nohup` in a finishing shell — that process dies and causes `ERR_CONNECTION_REFUSED`
-- Before starting: ensure nothing else listens on the discovered ports
+- Before starting: ensure nothing else listens on those ports
 - If disk is critically full (~99%): prune safe caches (`docker builder prune`) before blaming the app
-- Verify health with whatever this repo uses (health endpoints, `curl` to API root/docs, HTTP 200 on the web origin)
+- Verify health with whatever this project uses (health endpoints, `curl` to API root/docs, HTTP 200 on the web origin)
 
-**Port rule:** Prefer ports from compose / `.env` / README. If the repo does not document ports and the user's environment expects defaults, use web **3000** and a single API **8000** only when that matches what you actually started — never assume a second API port or second tenant unless the repo defines it.
-
+**Port rule:** Prefer ports from this project's compose / `.env` / README /
+project memory. If still unknown, use web **3000** and a single API **8000**
+only when that matches what you actually started — never assume a second API
+port or second tenant unless **this** project defines it.
 ### 5. Local DB migrations (required when needed)
 Always check whether this PR (or the checked-out branch) needs schema updates **before** the UI walk. Do not skip this step.
 
 1. **Detect**
-   - Diff / list new or changed migration files for whatever tool this repo uses (paths vary — discover from the repo)
+   - Diff / list new or changed migration files for whatever tool this project uses (paths from repo docs or project memory)
    - Also treat as migration-needed if the PR description or code references migrations, new tables/columns, or “run migrations”
 2. **Apply when needed** (and when in doubt that DBs may be behind head):
    - Wait until required DB/API containers or processes are healthy
-   - Run the project's migration command against **each local database the project actually defines** (one DB → one apply; multiple tenants/DBs → apply to each using the repo's documented commands/containers)
+   - Run the project's migration command against **each local database this project defines** (one DB → one apply; multiple tenants/DBs → apply to each using this project's documented/remembered commands/containers)
    - Prefer the project's “upgrade to latest” command over inventing selective revision lists
 3. **Stamp / baseline only when justified**
    - If schema already exists but the migration tool is not marked applied: verify schema, then use the project's stamp/baseline command — do not stamp blindly
 4. **Report**
    - Note in the summary / DEMO.md whether migrations ran, stamped, or were unnecessary
-5. **Do not invent** migration commands, revision IDs, or SQL that are not in the PR/repo
-
+5. **Do not invent** migration commands, revision IDs, or SQL that are not in the PR/repo or established for this project
 If migration apply fails, stop the UI demo for schema-dependent flows, record the error honestly, and include fix/review steps under non-UI review.
 
 ### 6. Summarize (before login walkthrough)
@@ -109,7 +126,8 @@ Short, factual summary only from PR description + code:
 - Screens/routes touched (from the diff)
 - Happy path + empty/error states they may see
 - Bullet list of **non-UI surfaces** that will get review instructions later
-- Active org/tenant/session context **only if** the local app has one and you can observe it — never invent client/tenant names
+- Active org/tenant/session context if observed in the running app or known for
+  this project's local setup — do not invent names from another client
 
 ### 7. Open browser; reuse session or wait for login
 - Prefer `open_resource` / workbench browser for the discovered local web origin (shares the user’s session better than a cold automation tab)
@@ -137,10 +155,10 @@ For each item include:
 - **Why it matters** — one short sentence from the PR intent
 - **How to review** — concrete steps the user can do, e.g.:
   - Open specific files / symbols in the IDE
-  - Hit API docs/health on the **discovered** API origin(s) and try named endpoints
+  - Hit API docs/health on this project's API origin(s) and try named endpoints
   - Example `curl` with placeholders for tokens/IDs (no invented secrets)
   - SQL / schema checks for migrations this PR adds
-  - Env/config keys to verify in the project's real env files / compose overrides
+  - Env/config keys to verify in this project's env files / compose overrides
   - Commands to run targeted tests from the PR
 - **Pass look** — what “good” looks like (status codes, table exists, test green, guard rejects, etc.)
 
@@ -172,8 +190,9 @@ Ensure `.local-backups/` is gitignored (add if missing).
 
 `DEMO.md` must include:
 - PR title, link, branch, date
-- Workspace/org + repository **as parsed from the PR URL** (not remembered labels)
-- Local session/tenant context only if observed in the running app
+- Workspace/org + repository from the PR URL, or from this project's remotes /
+  project memory when the URL did not carry them
+- Local session/tenant context if observed or known for this project
 - One short “what this PR fixes / adds” blurb from the PR description + code (no invention)
 - Numbered sections matching the UI walk; each section has a short caption of what is on screen and a relative image: `![…](screenshots/NN-….png)`
 - Call out gaps honestly (empty data, missing config, card hidden because JSON is `[]`)
@@ -188,11 +207,12 @@ If the PR has **no** frontend surfaces, still write `DEMO.md` with PR metadata +
 - Brief recap: UI screens shown + path to **DEMO.md** + **Review checklist** summary + blockers for full E2E
 
 ## Hard rules
-- **No client lock-in:** never bake in a specific company, product, workspace, repo, tenant, org, or service nickname; always resolve from PR URL + current repo
-- **No stack lock-in:** do not assume Compose service names, `apps/web`, `pnpm`, Alembic, Next.js, dual APIs, or dual DBs unless this repository defines them
-- Ports: use discovered ports; avoid duplicate listeners on whatever you start
+- **No cross-client lock-in:** do not reuse another project's company, product, workspace, repo, tenant, org, or service nicknames. Resolve identity from the PR URL + **this** project's remotes/files/memory
+- **Project memory is allowed:** for the open workspace/repo, reuse known local ports, compose services, migration commands, cred paths, and runbooks from prior work on *this* project
+- **No foreign stack assumptions:** do not assume another client's Compose names, `apps/web`, `pnpm`, Alembic, Next.js, dual APIs, or dual DBs unless **this** repository (or its project memory) defines them
+- Ports: use this project's known ports; avoid duplicate listeners on whatever you start
 - Never invent sprint tags, env vars, routes, or UI that is not in the PR/code
-- Prefer evidence from the PR host + repo files over memory of previous demos
+- Prefer PR host + repo files; supplement with **this** project's memory; ignore unrelated prior chats
 - Always cover non-frontend reviewables when the diff has them — do not stop at the UI demo
 - **Always** check and apply local DB migrations when the PR/branch needs them (§5) for every DB this project actually runs locally before schema-dependent UI walks
 - **Always** write the markdown + screenshots demo doc; **never** produce a demo video

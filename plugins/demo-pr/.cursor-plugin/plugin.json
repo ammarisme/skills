@@ -1,7 +1,7 @@
 {
   "name": "demo-pr",
-  "version": "1.1.0",
-  "description": "Demo any pull request locally: discover stack from the repo, UI walkthrough, screenshots, and non-UI review checklist",
+  "version": "1.1.1",
+  "description": "Demo any pull request locally using this project's repo + memory: stack, UI walkthrough, screenshots, non-UI review",
   "author": {
     "name": "Ammar"
   },
