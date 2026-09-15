@@ -1,10 +1,16 @@
 {
   "name": "demo-pr",
-  "version": "1.1.1",
-  "description": "Demo any pull request locally using this project's repo + memory: stack, UI walkthrough, screenshots, non-UI review",
+  "version": "1.2.0",
+  "description": "Demo PRs locally: live UI walkthrough + separate DEMO.md screenshots doc",
   "author": {
     "name": "Ammar"
   },
-  "keywords": ["demo", "pull-request", "pr", "bitbucket", "github"],
+  "keywords": [
+    "demo",
+    "pull-request",
+    "pr",
+    "bitbucket",
+    "github"
+  ],
   "skills": "./skills/"
 }

@@ -3,10 +3,11 @@ name: demo-pr
 description: >-
   Demo a pull request locally in a client-agnostic way: resolve PR metadata from
   the URL, safe checkout, rebuild/start the project's local stack from repo
-  conventions, apply migrations when needed, summarize user-facing flow, walk
-  logged-in UI in Cursor browser with paced steps, capture screenshots into a
-  markdown demo doc, and give review instructions for non-UI changes. Never
-  record video. Use when the user says demo PR, /demo-pr, walk through a pull
+  conventions, apply migrations when needed, summarize user-facing flow, run a
+  live paced UI walkthrough in the Cursor browser, AND write a separate DEMO.md
+  screenshot doc under .local-backups/, plus review instructions for non-UI
+  changes. Never record video. Both the live walkthrough and DEMO.md are
+  required. Use when the user says demo PR, /demo-pr, walk through a pull
   request, or pastes a PR URL for a live demo.
 disable-model-invocation: true
 ---
@@ -28,6 +29,26 @@ slugs, repo slugs, tenant labels, service nicknames, or path layouts from an
 
 Do **not** invent facts, and do **not** reuse another client's defaults just
 because they appeared in an older chat.
+
+## Required deliverables (both mandatory)
+
+A `/demo-pr` run is **incomplete** unless **both** of these are produced. Neither
+replaces the other.
+
+1. **Live UI walkthrough (in chat + Cursor browser)** — After login (or when an
+   authenticated session already exists), drive the browser through every
+   frontend surface in the PR with paced steps (~3s between actions). Narrate
+   each step in the chat as you go (what you clicked, what appeared). Take
+   screenshots during this walk. Do **not** skip the live walk and only write a
+   markdown file. Do **not** stop after the pre-login summary.
+2. **Separate `DEMO.md` file** — After (or as you finish) the live walk, write
+   `.local-backups/demo-pr-<PR_NUMBER>/DEMO.md` with relative screenshot embeds,
+   open it via `open_resource`, and tell the user the path. Chat narration alone
+   is not enough.
+
+Also produce the **Review checklist** for non-UI surfaces when the diff has them
+(§9). Unlock the browser when finished (§11).
+
 ## User prompt template (paste and fill)
 
 ```
@@ -41,8 +62,8 @@ Demo this PR for me:
 5. Check for and apply any local DB migrations required by this PR before the UI walk.
 6. Summarize the user-facing flow from the PR description + code (do not invent).
 7. Open the local web app in the Cursor browser. If an authenticated session is already active, continue; otherwise wait until I say I am logged in.
-8. After login (or when already authenticated), walk through every frontend change in the PR. Pause ~3 seconds between steps.
-9. Capture screenshots of each UI step and write a markdown demo doc with those images.
+8. After login (or when already authenticated), run a LIVE UI walkthrough of every frontend change in the PR in the Cursor browser. Narrate each step in chat. Pause ~3 seconds between steps. Capture a screenshot at each step.
+9. Write a SEPARATE markdown demo doc (DEMO.md) under .local-backups/demo-pr-<PR_NUMBER>/ with those screenshots embedded. Open DEMO.md for me. Do not treat the chat narration as a substitute for DEMO.md.
 10. Unlock the browser when finished. Call out env gaps (missing config, empty data) honestly.
 11. For anything that cannot be demoed in the frontend, give me clear review instructions
     (what to open, what to verify, curl/SQL/tests as applicable).
@@ -81,6 +102,7 @@ Demo this PR for me:
   - **Not frontend-demoable** (API, middleware, auth/tenancy, repos, migrations, workers, config/env, tests, scripts)
 - Infer UI routes / migrations from **this** diff; use project memory only for
   how to *navigate/run* this app, not to invent features the PR did not change
+
 ### 1. Safe checkout
 - `git status` — if dirty, `git stash push -u -m "demo-pr autosave"` (tell the user)
 - Fetch and checkout/track the PR's **source branch** (or the host's PR-ref checkout equivalent)
@@ -103,6 +125,7 @@ Demo this PR for me:
 project memory. If still unknown, use web **3000** and a single API **8000**
 only when that matches what you actually started — never assume a second API
 port or second tenant unless **this** project defines it.
+
 ### 5. Local DB migrations (required when needed)
 Always check whether this PR (or the checked-out branch) needs schema updates **before** the UI walk. Do not skip this step.
 
@@ -118,6 +141,7 @@ Always check whether this PR (or the checked-out branch) needs schema updates **
 4. **Report**
    - Note in the summary / DEMO.md whether migrations ran, stamped, or were unnecessary
 5. **Do not invent** migration commands, revision IDs, or SQL that are not in the PR/repo or established for this project
+
 If migration apply fails, stop the UI demo for schema-dependent flows, record the error honestly, and include fix/review steps under non-UI review.
 
 ### 6. Summarize (before login walkthrough)
@@ -129,6 +153,9 @@ Short, factual summary only from PR description + code:
 - Active org/tenant/session context if observed in the running app or known for
   this project's local setup — do not invent names from another client
 
+This summary is a **preface only**. After login you must still do §8 (live walk)
+and §10 (`DEMO.md`).
+
 ### 7. Open browser; reuse session or wait for login
 - Prefer `open_resource` / workbench browser for the discovered local web origin (shares the user’s session better than a cold automation tab)
 - List browser tabs and inspect the best candidate tab already on that origin
@@ -139,13 +166,17 @@ Short, factual summary only from PR description + code:
 - If **not** authenticated: open/focus the local web origin, then **wait until the user says they are logged in**. Do not click through protected UI until then.
 - Prefer locking the authenticated tab, not a fresh login tab
 
-### 8. Post-login UI walkthrough (+ screenshots)
+### 8. Live UI walkthrough (required deliverable #1)
+This is the interactive demo. It must happen in the Cursor browser and be
+narrated in chat. Writing `DEMO.md` later does **not** replace this step.
+
 - Lock browser → snapshot → act → **`browser_take_screenshot`** → **~3s pause** → next step
 - Prefer `browser_navigate` to concrete routes when SPA/sidebar clicks do not change the URL (framework-agnostic)
 - Cover **every frontend surface in the PR** (new pages, tabs, filters, empty states, admin entries)
-- Narrate what appears; do not invent data that is not on screen
+- **Narrate in chat** after each meaningful step (button clicked, dialog opened, empty state shown, etc.); do not invent data that is not on screen
 - If a feature needs config (flags, seeds, peer services) and the UI shows an empty/config message, say so and stop that branch of the demo rather than fabricating steps
 - Save screenshots with stable numbered names into the demo folder (see §10). Prefer absolute paths under the repo’s `.local-backups/` so files land in a predictable place; after capture, copy from the Cursor screenshots temp dir into that folder if needed
+- If the PR has **no** frontend surfaces, say so in chat and skip straight to §9 + a no-UI `DEMO.md` (§10)
 
 ### 9. Non-frontend review instructions (required when applicable)
 After the UI walk (or immediately if the PR has **no** frontend changes), produce a **Review checklist** for everything that is not demoable in the browser. Use only evidence from the PR/diff/code.
@@ -172,8 +203,10 @@ Typical non-UI buckets to scan for (skip empty buckets):
 
 Do **not** invent review steps for code the PR did not touch.
 
-### 10. Demo markdown document (required; no video)
-Always produce a screenshot walkthrough doc. **Do not** record or encode video (no ffmpeg slideshow, no screencast, no mp4/mov).
+### 10. Separate DEMO.md document (required deliverable #2; no video)
+Always produce a **standalone** screenshot walkthrough file on disk. Chat
+narration from §8 is **not** a substitute. **Do not** record or encode video
+(no ffmpeg slideshow, no screencast, no mp4/mov).
 
 Layout:
 
@@ -194,7 +227,9 @@ Ensure `.local-backups/` is gitignored (add if missing).
   project memory when the URL did not carry them
 - Local session/tenant context if observed or known for this project
 - One short “what this PR fixes / adds” blurb from the PR description + code (no invention)
-- Numbered sections matching the UI walk; each section has a short caption of what is on screen and a relative image: `![…](screenshots/NN-….png)`
+- A **UI walkthrough** section with numbered subsections matching the live walk;
+  each subsection has a short caption of what is on screen and a relative image:
+  `![…](screenshots/NN-….png)`
 - Call out gaps honestly (empty data, missing config, card hidden because JSON is `[]`)
 - A short **Review notes** section summarizing non-UI checklist items (or “frontend-only” if none)
 
@@ -204,7 +239,9 @@ If the PR has **no** frontend surfaces, still write `DEMO.md` with PR metadata +
 
 ### 11. Finish
 - Unlock the browser
-- Brief recap: UI screens shown + path to **DEMO.md** + **Review checklist** summary + blockers for full E2E
+- Confirm **both** deliverables: live UI walk completed + path to **DEMO.md**
+- Brief recap: UI screens shown + **Review checklist** summary + blockers for full E2E
+- Do **not** end the run after §6/§7 only (summary / waiting for login is not done)
 
 ## Hard rules
 - **No cross-client lock-in:** do not reuse another project's company, product, workspace, repo, tenant, org, or service nicknames. Resolve identity from the PR URL + **this** project's remotes/files/memory
@@ -215,5 +252,5 @@ If the PR has **no** frontend surfaces, still write `DEMO.md` with PR metadata +
 - Prefer PR host + repo files; supplement with **this** project's memory; ignore unrelated prior chats
 - Always cover non-frontend reviewables when the diff has them — do not stop at the UI demo
 - **Always** check and apply local DB migrations when the PR/branch needs them (§5) for every DB this project actually runs locally before schema-dependent UI walks
-- **Always** write the markdown + screenshots demo doc; **never** produce a demo video
+- **Always** complete the **live UI walkthrough** (§8) **and** write the separate **DEMO.md** (§10); neither replaces the other; **never** produce a demo video
 - **Do not** ask the user to log in when an authenticated local-web browser session is already active (§7)
