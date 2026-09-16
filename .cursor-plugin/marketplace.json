@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Personal Cursor skills marketplace",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "pluginRoot": "plugins"
   },
   "plugins": [
@@ -14,6 +14,11 @@
       "name": "demo-pr",
       "source": "demo-pr",
       "description": "Demo any PR locally: discover stack from the repo, UI walkthrough, screenshots, and non-UI review checklist"
+    },
+    {
+      "name": "pending-dev-report",
+      "source": "pending-dev-report",
+      "description": "Pending Jira tickets vs open/draft Bitbucket PRs: waiting review, ready for release, no-PR buckets, unmapped PRs"
     }
   ]
 }

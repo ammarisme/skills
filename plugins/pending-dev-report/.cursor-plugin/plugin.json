@@ -1,0 +1,19 @@
+{
+  "name": "pending-dev-report",
+  "version": "1.0.0",
+  "description": "Report pending Jira tickets vs open/draft Bitbucket PRs: waiting review, ready for release, no-PR buckets, unmapped PRs",
+  "author": {
+    "name": "Ammar"
+  },
+  "keywords": [
+    "jira",
+    "bitbucket",
+    "pull-request",
+    "pending",
+    "review",
+    "release",
+    "twg",
+    "standup"
+  ],
+  "skills": "./skills/"
+}
